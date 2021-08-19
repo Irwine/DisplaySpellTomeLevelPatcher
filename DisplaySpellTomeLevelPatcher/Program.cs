@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Collections.Immutable;
+using System.Text;
 
 namespace DisplaySpellTomeLevelPatcher
 {
@@ -28,12 +29,19 @@ namespace DisplaySpellTomeLevelPatcher
         public static ModKey Vokrii = ModKey.FromNameAndExtension("Vokrii - Minimalistic Perks of Skyrim.esp");
 
         public static readonly HashSet<string> skillLevels = new HashSet<string>() {
-            "Novice",
-			"Apprenti",
-            "Adepte",
+  	    "Novice",
+            "Apprentice",
+            "Adept",
             "Expert",
             "Master"
-        };
+         };
+	public static readonly string[] skillLevelTranslations = new string[5] {
+	  "Novice",
+	  "Apprenti",
+	  "Adepte",
+	  "Expert",
+	  "Maître"
+	};
 
         public static readonly HashSet<string> magicSchools = new HashSet<string>()
         {
@@ -89,6 +97,9 @@ namespace DisplaySpellTomeLevelPatcher
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
+		Encoding wind1252 = Encoding.GetEncoding(1252);
+		Encoding utf8 = Encoding.UTF8;
+		
             foreach (var bookContext in state.LoadOrder.PriorityOrder.Book().WinningContextOverrides())
             {
                 IBookGetter book = bookContext.Record;
@@ -100,11 +111,13 @@ namespace DisplaySpellTomeLevelPatcher
                 if (!state.LinkCache.TryResolveContext(spell.HalfCostPerk.FormKey, spell.HalfCostPerk.Type, out var halfCostPerkContext)) continue;
                 var halfCostPerk = (IPerkGetter)halfCostPerkContext.Record;
                 if (halfCostPerk == null) continue;
-
-                string spellName = GetSpellNameFromSpellTome(book.Name.String);
+		book.Name.TryLookup(Language.French, out var i18nBookName);
+                string spellName = GetSpellNameFromSpellTome(i18nBookName.String);
                 if (spellName == "")
                 {
-                    Console.WriteLine($"{book.FormKey}: Could not get spell name from: {book.Name.String}");
+		    var utf8Bytes = utf8.getBytes(i18nBookName)
+		    i18nBookName = wind1252.GetString(utf8Bytes);
+                    Console.WriteLine($"{book.FormKey}: Could not get spell name from: {i18nBookName.String}");
                     continue;
                 }
 
@@ -112,15 +125,17 @@ namespace DisplaySpellTomeLevelPatcher
                 bool changed = false;
                 if (bookName.Contains(levelFormatVariable))
                 {
+                    int i = -1;
                     foreach (string skillLevel in skillLevels)
                     {
+                        i++;
                         if (halfCostPerkContext.ModKey == Vokrii && halfCostPerk.Description != null)
                         {
                             if (!DescriptionContain(halfCostPerk, skillLevel)) continue;
                         }
                         else if (!NamedFieldsContain(halfCostPerk, skillLevel)) continue;
 
-                        bookName = bookName.Replace(levelFormatVariable, skillLevel);
+                        bookName = bookName.Replace(levelFormatVariable, skillLevelTranslations[i]);
                         changed = true;
                         break;
                     }
@@ -148,10 +163,12 @@ namespace DisplaySpellTomeLevelPatcher
                 }
                 if (bookName.Contains(spellFormatVariable))
                 {
-                    bookName = bookName.Replace(spellFormatVariable, GetSpellNameFromSpellTome(book.Name.String));
+                    bookName = bookName.Replace(spellFormatVariable, GetSpellNameFromSpellTome(i18nBookName.String));
                     changed = true;
                 }
-                if (changed && book.Name.String != bookName)
+		byte[] bytes = Encoding.Default.GetBytes(bookName);
+		bookName = Encoding.UTF8.GetString(bytes);
+                if (changed && i18nBookName.String != bookName)
                 {
                     Book bookToAdd = book.DeepCopy();
                     bookToAdd.Name = bookName;
