@@ -1,11 +1,6 @@
 # Version francophone
 
-En l'état actuel le patch ne fonctionne pas totalement en français, l'un d'elle est que synthesis et le patcheur ont été créés par des anglophones.
-Ceci va provoquer une recherche des livres de sort dans la version EN de skyrim et ses DLCs et donc une impossibilité de les inclures dans le patch final.
-Pour contourner cela un espfe a été créé par mes soins et disponible ici.
-
-## VEUILLEZ LIRE AVEC UN EXTRÊME ATTENTION AUX INSTRUCTIONS FOURNIES DANS LE DOCUMENT ANNEXE !
-https://drive.google.com/file/d/1xaW8FBIWc-IE__NJ5PQzDHGi1_DLLOmx/view?usp=sharing
+Ce patch vous permettra d'ajouter plusieurs éléments au nom de vos livres de sorts, tels que le nom de l'école, le niveau du sort et le mod duquel il est issu.
 
 Dans l'application Synthesis vous pouvez paramêtrer de plusieurs éléments :
 <school> permet d'afficher le nom de l'école de magie
@@ -19,3 +14,6 @@ Par exemple
 (<level>) Livre de sort - <spell> ===> (Novice) Livre de sort - Illumination
 
 Libre à vous de choisir ce que vous voulez afficher et comment.
+
+# Crédits
+Un très grand merci à Phlasriel qui a gentiment modifié le code pour qu'il fonctionne avec les particularités de la langue française.
