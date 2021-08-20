@@ -1,6 +1,8 @@
-# Version francophone
+# DisplaySpellTomeLevelPatcher
 
 Ce patch vous permettra d'ajouter plusieurs éléments au nom de vos livres de sorts, tels que le nom de l'école, le niveau du sort et le mod duquel il est issu.
+
+## Paramètres
 
 Dans l'application Synthesis vous pouvez paramêtrer de plusieurs éléments :
 <school> permet d'afficher le nom de l'école de magie
