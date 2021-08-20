@@ -30,6 +30,7 @@ namespace DisplaySpellTomeLevelPatcher
 
         public static readonly HashSet<string> skillLevels = new HashSet<string>() {
             "Novice",
+
             "Apprenti",
             "Adepte",
             "Expert",
@@ -101,6 +102,7 @@ namespace DisplaySpellTomeLevelPatcher
                 if (!state.LinkCache.TryResolveContext(spell.HalfCostPerk.FormKey, spell.HalfCostPerk.Type, out var halfCostPerkContext)) continue;
                 var halfCostPerk = (IPerkGetter)halfCostPerkContext.Record;
                 if (halfCostPerk == null) continue;
+
                 
                 string i18nBookName = "";
                 
@@ -115,6 +117,7 @@ namespace DisplaySpellTomeLevelPatcher
                 if (spellName == "")
                 {
                     Console.WriteLine($"{book.FormKey}: Could not get spell name from: {i18nBookName}");
+
                     continue;
                 }
 
@@ -124,14 +127,18 @@ namespace DisplaySpellTomeLevelPatcher
                 {
                     foreach (string skillLevel in skillLevels)
                     {
+
                         string i18nSkillLevel = Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(skillLevel));
+
                         if (halfCostPerkContext.ModKey == Vokrii && halfCostPerk.Description != null)
                         {
                             if (!DescriptionContain(halfCostPerk, i18nSkillLevel)) continue;
                         }
                         else if (!NamedFieldsContain(halfCostPerk, i18nSkillLevel)) continue;
 
+
                         bookName = bookName.Replace(levelFormatVariable, i18nSkillLevel);
+
                         changed = true;
                         break;
                     }
@@ -161,10 +168,12 @@ namespace DisplaySpellTomeLevelPatcher
                 }
                 if (bookName.Contains(spellFormatVariable))
                 {
+
                     bookName = bookName.Replace(spellFormatVariable, GetSpellNameFromSpellTome(i18nBookName));
                     changed = true;
                 }
                 if (changed && i18nBookName != bookName)
+
                 {
                     string i18nBookDescription = null;
                     string i18nBookText = null;
