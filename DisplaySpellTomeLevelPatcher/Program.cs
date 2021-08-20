@@ -8,6 +8,7 @@ using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Immutable;
 
@@ -29,19 +30,20 @@ namespace DisplaySpellTomeLevelPatcher
 
         public static readonly HashSet<string> skillLevels = new HashSet<string>() {
             "Novice",
-			"Apprenti",
+
+            "Apprenti",
             "Adepte",
             "Expert",
-            "Master"
+            "Maître"
         };
 
         public static readonly HashSet<string> magicSchools = new HashSet<string>()
         {
-            "Restoration",
+            "Guérison",
             "Destruction",
             "Conjuration",
             "Illusion",
-            "Alteration"
+            "Altération"
         };
 
         public const string levelFormatVariable = "<level>";
@@ -51,16 +53,14 @@ namespace DisplaySpellTomeLevelPatcher
 
         public static Dictionary<string, string> spellLevelDictionary = new Dictionary<string, string>();
 
-        public static string GenerateScrollName(string scrollName, string level)
-        {
-            return scrollName.Replace("Scroll of", $"Scroll ({level}):");
-        }
-
         public static string GetSpellNameFromSpellTome(string spellTomeName)
         {
             try
             {
-                return spellTomeName.Split(" - ")[1];
+                if (spellTomeName.Contains(" - ")) {
+                    return spellTomeName.Split(" - ")[1];
+                }
+                return spellTomeName.Split(": ")[1];
             }
             catch (IndexOutOfRangeException)
             {
@@ -74,17 +74,19 @@ namespace DisplaySpellTomeLevelPatcher
             string scrollSpellName = string.Join(' ', splitScrollName.Skip(2).ToArray());
             return scrollSpellName;
         }
+
         public static bool NamedFieldsContain<TMajor>(TMajor named, string str)
             where TMajor : INamedGetter, IMajorRecordCommonGetter
         {
-            if (named.EditorID?.Contains(str) ?? false) return true;
-            if (named.Name?.Contains(str) ?? false) return true;
+            if (named.EditorID?.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (named.Name?.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+
             return false;
         }
 
         public static bool DescriptionContain(IPerkGetter perkGetter, string str)
         {
-            return perkGetter.Description?.String?.Contains(str) ?? false;
+            return perkGetter.Description?.String?.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
@@ -101,10 +103,21 @@ namespace DisplaySpellTomeLevelPatcher
                 var halfCostPerk = (IPerkGetter)halfCostPerkContext.Record;
                 if (halfCostPerk == null) continue;
 
-                string spellName = GetSpellNameFromSpellTome(book.Name.String);
+                
+                string i18nBookName = "";
+                
+                if (!book.Name.TryLookup(Language.French, out i18nBookName)) {
+                    //Console.WriteLine($"{book.FormKey}: Pas de traduction pour: {book.Name.String}");
+                    i18nBookName = book.Name.String;
+                }
+                
+                //Console.WriteLine($"{book.FormKey}: Traduction: {i18nBookName}");
+
+                string spellName = GetSpellNameFromSpellTome(i18nBookName);
                 if (spellName == "")
                 {
-                    Console.WriteLine($"{book.FormKey}: Could not get spell name from: {book.Name.String}");
+                    Console.WriteLine($"{book.FormKey}: Could not get spell name from: {i18nBookName}");
+
                     continue;
                 }
 
@@ -114,13 +127,18 @@ namespace DisplaySpellTomeLevelPatcher
                 {
                     foreach (string skillLevel in skillLevels)
                     {
+
+                        string i18nSkillLevel = Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(skillLevel));
+
                         if (halfCostPerkContext.ModKey == Vokrii && halfCostPerk.Description != null)
                         {
-                            if (!DescriptionContain(halfCostPerk, skillLevel)) continue;
+                            if (!DescriptionContain(halfCostPerk, i18nSkillLevel)) continue;
                         }
-                        else if (!NamedFieldsContain(halfCostPerk, skillLevel)) continue;
+                        else if (!NamedFieldsContain(halfCostPerk, i18nSkillLevel)) continue;
 
-                        bookName = bookName.Replace(levelFormatVariable, skillLevel);
+
+                        bookName = bookName.Replace(levelFormatVariable, i18nSkillLevel);
+
                         changed = true;
                         break;
                     }
@@ -138,9 +156,11 @@ namespace DisplaySpellTomeLevelPatcher
                 {
                     foreach (string spellSchool in magicSchools)
                     {
-                        if (NamedFieldsContain(halfCostPerk, spellSchool) || DescriptionContain(halfCostPerk, spellSchool))
+                        string i18nSpellSchool = Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(spellSchool));
+
+                        if (NamedFieldsContain(halfCostPerk, i18nSpellSchool) || DescriptionContain(halfCostPerk, i18nSpellSchool))
                         {
-                            bookName = bookName.Replace(schoolFormatVariable, spellSchool);
+                            bookName = bookName.Replace(schoolFormatVariable, i18nSpellSchool);
                             changed = true;
                             break;
                         }
@@ -148,32 +168,27 @@ namespace DisplaySpellTomeLevelPatcher
                 }
                 if (bookName.Contains(spellFormatVariable))
                 {
-                    bookName = bookName.Replace(spellFormatVariable, GetSpellNameFromSpellTome(book.Name.String));
+
+                    bookName = bookName.Replace(spellFormatVariable, GetSpellNameFromSpellTome(i18nBookName));
                     changed = true;
                 }
-                if (changed && book.Name.String != bookName)
+                if (changed && i18nBookName != bookName)
+
                 {
+                    string i18nBookDescription = null;
+                    string i18nBookText = null;
+                    book.Description?.TryLookup(Language.French, out i18nBookDescription);
+                    book.BookText?.TryLookup(Language.French, out i18nBookText);
+
                     Book bookToAdd = book.DeepCopy();
                     bookToAdd.Name = bookName;
+                    bookToAdd.Description = i18nBookDescription ?? book.Description.String;
+                    bookToAdd.BookText = i18nBookText ?? book.BookText.String;
+
+                    Console.WriteLine($"{book.FormKey}: {bookName} : {bookToAdd.BookText.String}");
                     state.PatchMod.Books.Set(bookToAdd);
                 }
             }
-
-            /*
-            foreach (var scroll in state.LoadOrder.PriorityOrder.Scroll().WinningOverrides())
-            {
-                if (scroll.Name?.String == null) continue;
-
-                string scrollSpellName = GetSpellNameFromScroll(scroll.Name.String);
-                if (spellLevelDictionary.TryGetValue(scrollSpellName, out var skillLevel))
-                {
-                    Scroll scrollToAdd = scroll.DeepCopy();
-                    scrollToAdd.Name = GenerateScrollName(scroll.Name.String, skillLevel);
-                    state.PatchMod.Scrolls.Set(scrollToAdd);
-                }
-            }
-            */
         }
-
     }
 }
