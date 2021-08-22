@@ -128,8 +128,7 @@ namespace DisplaySpellTomeLevelPatcher
                     foreach (string skillLevel in skillLevels)
                     {
 
-                        string i18nSkillLevel = GetString(skillLevel);
-                        //Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(skillLevel));
+                        //string i18nSkillLevel = //Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(skillLevel));
 
                         if (halfCostPerkContext.ModKey == Vokrii && halfCostPerk.Description != null)
                         {
