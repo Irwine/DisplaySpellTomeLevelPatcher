@@ -158,7 +158,7 @@ namespace DisplaySpellTomeLevelPatcher
                     foreach (string spellSchool in magicSchools)
                     {
                         //string i18nSpellSchool = Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(spellSchool));
-                        string i18nSpellSchool = spellSchool);
+                        string i18nSpellSchool = spellSchool;
                         if (NamedFieldsContain(halfCostPerk, i18nSpellSchool) || DescriptionContain(halfCostPerk, i18nSpellSchool))
                         {
                             bookName = bookName.Replace(schoolFormatVariable, i18nSpellSchool);
