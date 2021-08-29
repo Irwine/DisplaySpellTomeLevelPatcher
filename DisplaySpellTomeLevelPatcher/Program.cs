@@ -11,7 +11,9 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Collections.Immutable;
 using Mutagen.Bethesda.Plugins;
-
+using Mutagen.Bethesda.Plugins.Aspects;
+using Mutagen.Bethesda.Plugins.Records;
+using Mutagen.Bethesda.Strings;
 namespace DisplaySpellTomeLevelPatcher
 {
     public class Program
