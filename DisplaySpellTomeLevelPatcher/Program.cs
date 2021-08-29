@@ -24,8 +24,8 @@ namespace DisplaySpellTomeLevelPatcher
         var skyrim = env.LoadOrder.GetIfEnabledAndExists(skyrimModKey);
 
         // Just inspect/process one specific book, for testing
-        var MassParalysis = skyrim.Books.First(x => x.EditorID == "SpellTomeMassParalysis");
-        TestOnBook(skyrimModKey, MassParalysis);
+        var Sparks = skyrim.Books.First(x => x.EditorID == "SpellTomeSparks");
+        TestOnBook(skyrimModKey, Sparks);
     }
 
     private static void TestOnBook(ModKey modKey, IBookGetter book)
@@ -43,7 +43,7 @@ namespace DisplaySpellTomeLevelPatcher
         }
 
         // Make a new mod to write out
-        var outgoing = new SkyrimMod("MassParalysis.esp", SkyrimRelease.SkyrimSE);
+        var outgoing = new SkyrimMod("Sparks.esp", SkyrimRelease.SkyrimSE);
 
         // Add book as override
         var bookW = outgoing.Books.GetOrAddAsOverride(book);
