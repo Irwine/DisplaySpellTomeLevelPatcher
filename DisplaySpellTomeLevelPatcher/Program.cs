@@ -10,10 +10,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Collections.Immutable;
-using Mutagen.Bethesda.Plugins;
-using Mutagen.Bethesda.Plugins.Aspects;
-using Mutagen.Bethesda.Plugins.Records;
-using Mutagen.Bethesda.Strings;
+
 namespace DisplaySpellTomeLevelPatcher
 {
     public class Program
@@ -25,8 +22,8 @@ namespace DisplaySpellTomeLevelPatcher
         var skyrim = env.LoadOrder.GetIfEnabledAndExists(skyrimModKey);
 
         // Just inspect/process one specific book, for testing
-        var massParalysis = skyrim.Books.First(x => x.EditorID == "SpellTomeMassParalysis");
-        TestOnBook(skyrimModKey, massParalysis);
+        var massParalysis = skyrim.Books.First(x => x.EditorID == "SpellTomeSparks");
+        TestOnBook(skyrimModKey, Sparks);
     }
 
     private static void TestOnBook(ModKey modKey, IBookGetter book)
@@ -44,7 +41,7 @@ namespace DisplaySpellTomeLevelPatcher
         }
 
         // Make a new mod to write out
-        var outgoing = new SkyrimMod("Outgoing.esp", SkyrimRelease.SkyrimSE);
+        var outgoing = new SkyrimMod("Sparks.esp", SkyrimRelease.SkyrimSE);
 
         // Add book as override
         var bookW = outgoing.Books.GetOrAddAsOverride(book);
