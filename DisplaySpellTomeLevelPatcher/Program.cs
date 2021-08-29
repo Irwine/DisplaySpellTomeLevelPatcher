@@ -30,7 +30,6 @@ namespace DisplaySpellTomeLevelPatcher
 
         public static readonly HashSet<string> skillLevels = new HashSet<string>() {
             "Novice",
-
             "Apprenti",
             "Adepte",
             "Expert",
@@ -102,7 +101,6 @@ namespace DisplaySpellTomeLevelPatcher
                 if (!state.LinkCache.TryResolveContext(spell.HalfCostPerk.FormKey, spell.HalfCostPerk.Type, out var halfCostPerkContext)) continue;
                 var halfCostPerk = (IPerkGetter)halfCostPerkContext.Record;
                 if (halfCostPerk == null) continue;
-
                 
                 string i18nBookName = "";
                 
@@ -129,8 +127,6 @@ namespace DisplaySpellTomeLevelPatcher
                     {
 
                         string i18nSkillLevel = Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(skillLevel));
-                        //string i18nSkillLevel = skillLevel;
-
                         if (halfCostPerkContext.ModKey == Vokrii && halfCostPerk.Description != null)
                         {
                             if (!DescriptionContain(halfCostPerk, i18nSkillLevel)) continue;
@@ -158,7 +154,7 @@ namespace DisplaySpellTomeLevelPatcher
                     foreach (string spellSchool in magicSchools)
                     {
                         string i18nSpellSchool = Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(spellSchool));
-                        //string i18nSpellSchool = spellSchool;
+                        
                         if (NamedFieldsContain(halfCostPerk, i18nSpellSchool) || DescriptionContain(halfCostPerk, i18nSpellSchool))
                         {
                             bookName = bookName.Replace(schoolFormatVariable, i18nSpellSchool);
