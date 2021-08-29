@@ -41,7 +41,7 @@ namespace DisplaySpellTomeLevelPatcher
         }
 
         // Make a new mod to write out
-        var outgoing = new SkyrimMod("Sparks.esp", SkyrimRelease.SkyrimSE);
+        var outgoing = new SkyrimMod("Outgoing.esp", SkyrimRelease.SkyrimSE);
 
         // Add book as override
         var bookW = outgoing.Books.GetOrAddAsOverride(book);
