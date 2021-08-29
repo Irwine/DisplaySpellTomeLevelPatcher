@@ -1,8 +1,8 @@
 {
-  "Nickname": "DisplaySpellTomeLevelPatcher",
+  "Nickname": "DisplaySpellTomeLevelPatcher - FR",
   "Visibility": "Visible",
-  "OneLineDescription": "Custom formatting options for the naming of your Spell Tomes, including level, magic school, plugin name & spell name",
-  "LongDescription": "Automatically patch your entire load order to show the skill level on all Spell Tomes! You can change the default format from Spell Tome (<level>): <spell> to any custom format including plugin name & magic school in the settings!",
+  "OneLineDescription": "Options de formatage personnalisées pour le nom de vos livres de sorts, y compris le niveau, l'école de magie, le nom du plugin et le nom du sort.",
+  "LongDescription": "Patch automatiquement tout de votre ordre de chargement pour afficher le niveau de compétence sur tous les livres de sorts ! Vous pouvez changer le format par défaut de Livre de sort (<level>) - <spell> à n'importe quel format personnalisé incluant le nom du plugin et l'école de magie dans les paramètres !",
   "PreferredAutoVersioning": "Default",
   "RequiredMods": []
 }
