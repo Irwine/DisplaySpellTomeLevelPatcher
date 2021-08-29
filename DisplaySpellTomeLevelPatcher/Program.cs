@@ -15,6 +15,7 @@ using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Aspects;
 using Mutagen.Bethesda.Plugins.Records;
 using Mutagen.Bethesda.Strings;
+using Mutagen.Bethesda.FormLink.SkyrimSE;
 
 namespace DisplaySpellTomeLevelPatcher
 {
