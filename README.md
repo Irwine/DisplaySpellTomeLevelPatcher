@@ -17,7 +17,7 @@ Ce patch vous permettra d'ajouter plusieurs éléments au nom de vos livres de s
 
 Libre à vous de choisir ce que vous voulez afficher et comment.
 ## Version à utiliser
-  0.30.4 ET 0.19.2
+  0.30.4 et 0.19.2
   
 # Crédits
 Un très grand merci à Phlasriel qui a gentiment modifié le code pour qu'il fonctionne avec les particularités de la langue française.
