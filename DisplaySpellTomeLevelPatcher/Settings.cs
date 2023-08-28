@@ -5,7 +5,7 @@ namespace DisplaySpellTomeLevelPatcher
 {
     public class Settings
     {
-        [SynthesisTooltip(@"Choisissez votre propre format ici ! Les variables disponibles sont : <level> (ex. Adepte), <spell> (ex. Clairvoyance), <plugin> (ex. Skyrim), <mod> (nom du mod au lieu du nom du plugin, ex. Forgotten Magic Redone), <school> (ex. Alteration). Le format par défaut est : Livre de sort (<level>) - <spell>")]
+        [SynthesisTooltip(@"Choisissez votre propre format ici ! Les variables disponibles sont : <level> (ex. Adepte), <spell> (ex. Clairvoyance), <plugin> (ex. Skyrim), <mod> (nom du mod au lieu du nom du plugin, ex. Forgotten Magic Redone), <school> (ex. Altération). Le format par défaut est : Livre de sort (<level>) - <spell>")]
         public string Format { get; set; } = "Livre de sort (<level>) - <spell>";
 
         [SynthesisTooltip(@"Spécifiez votre propre format pour les noms de mod (<mod>) ici ! Lorsqu'un nom de plugin n'est pas trouvé ici, le patcher essaiera de convertir automatiquement le nom du plugin en nom de mod - les résultats peuvent varier.")]
