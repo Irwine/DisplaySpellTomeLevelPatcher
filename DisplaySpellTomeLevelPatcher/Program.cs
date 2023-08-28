@@ -5,16 +5,17 @@ using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.Skyrim;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
-using System.IO;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Collections.Immutable;
+using Mutagen.Bethesda.Plugins;
+using Mutagen.Bethesda.Plugins.Exceptions;
+using Mutagen.Bethesda.Plugins.Cache;
+using System.Globalization;
+using Soltys.ChangeCase;
 
 namespace DisplaySpellTomeLevelPatcher
 {
-    public class Program
+    public static class Program
     {
         private static Lazy<Settings> _settings = null!;
         public static Task<int> Main(string[] args)
@@ -26,166 +27,148 @@ namespace DisplaySpellTomeLevelPatcher
                 .Run(args);
         }
 
-        public static ModKey Vokrii = ModKey.FromNameAndExtension("Vokrii - Minimalistic Perks of Skyrim.esp");
+        public readonly static ModKey BetterSpellLearning = ModKey.FromNameAndExtension("Better Spell Learning.esp");
 
-        public static readonly HashSet<string> skillLevels = new HashSet<string>() {
-            "Novice",
-            "Apprenti",
-            "Adepte",
-            "Expert",
-            "Maître"
+        public const string LevelFormat = "<level>";
+        public const string SpellFormat = "<spell>";
+        public const string PluginFormat = "<plugin>";
+        public const string ModFormat = "<mod>";
+        public const string SchoolFormat = "<school>";
+
+        public readonly static Dictionary<ActorValue, string> MagicSchools = new() {
+            { ActorValue.Alteration, "Altération" },
+            { ActorValue.Conjuration, "Conjuration" },
+            { ActorValue.Destruction, "Destruction" },
+            { ActorValue.Illusion, "Illusion" },
+            { ActorValue.Restoration, "Guérison" }
         };
 
-        public static readonly HashSet<string> magicSchools = new HashSet<string>()
+
+        public static string GetSchoolName(ActorValue av)
         {
-            "Guérison",
-            "Destruction",
-            "Conjuration",
-            "Illusion",
-            "Altération"
-        };
+            if (MagicSchools.ContainsKey(av))
+                return MagicSchools[av];
 
-        public const string levelFormatVariable = "<level>";
-        public const string spellFormatVariable = "<spell>";
-        public const string pluginFormatVariable = "<plugin>";
-        public const string schoolFormatVariable = "<school>";
+            return "None";
+        }
 
-        public static Dictionary<string, string> spellLevelDictionary = new Dictionary<string, string>();
-
-        public static string GetSpellNameFromSpellTome(string spellTomeName)
+        public static readonly HashSet<uint> AllowedMinimumSkillLevels = new() { 0, 25, 50, 75, 100 };
+        public static Tuple<ActorValue, int>? GetSpellInfo(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, ISpellGetter spell)
         {
-            try
+            double maxCost = -1.0;
+            int maxLevel = -1;
+            IMagicEffectGetter? maxBaseEffect = null;
+            foreach (var effect in spell.Effects)
             {
-                if (spellTomeName.Contains(" - ")) {
-                    return spellTomeName.Split(" - ")[1];
+                if (effect.Data == null)
+                    continue;
+
+                if (effect.BaseEffect.TryResolve(state.LinkCache, out var baseEffect))
+                {
+                    var durFactor = baseEffect.CastType == CastType.Concentration ? 1 : Math.Pow(effect.Data.Duration == 0 ? 10 : effect.Data.Duration, 1.1);
+                    double cost = baseEffect.BaseCost * Math.Pow(effect.Data.Magnitude, 1.1) * durFactor;
+                    if (cost > maxCost)
+                    {
+                        maxCost = cost;
+                        maxBaseEffect = baseEffect;
+
+                        if (!AllowedMinimumSkillLevels.Contains(baseEffect.MinimumSkillLevel))
+                            Console.WriteLine("Unexpected minimum skill level for magic effect:" + baseEffect.FormKey);
+
+                        maxLevel = (int)(baseEffect.MinimumSkillLevel / 25);
+                        maxLevel = Math.Max(0, Math.Min(4, maxLevel));
+                    }
                 }
-                return spellTomeName.Split(": ")[1];
             }
-            catch (IndexOutOfRangeException)
-            {
-                return "";
-            }
+            if (maxBaseEffect == null)
+                return null;
+
+            return new Tuple<ActorValue, int>(maxBaseEffect.MagicSkill, maxLevel);
         }
 
-        public static string GetSpellNameFromScroll(string scrollName)
+        // Gets the spell effect for Better Spell Learning affected tomes
+        public static ISpellGetter? GetBSLSpell(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, IBookGetter book)
         {
-            string[] splitScrollName = scrollName.Split(' ');
-            string scrollSpellName = string.Join(' ', splitScrollName.Skip(2).ToArray());
-            return scrollSpellName;
-        }
+            var spellTomeReadScript = book.VirtualMachineAdapter?.Scripts.FirstOrDefault(s => s.Name == "SpellTomeReadScript");
+            IScriptObjectPropertyGetter? spellLearnedProperty = (IScriptObjectPropertyGetter?)(spellTomeReadScript?.Properties.FirstOrDefault(p => p is IScriptObjectPropertyGetter && p.Name == "SpellLearned"));
 
-        public static bool NamedFieldsContain<TMajor>(TMajor named, string str)
-            where TMajor : INamedGetter, IMajorRecordCommonGetter
-        {
-            if (named.EditorID?.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0) return true;
-            if (named.Name?.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (spellLearnedProperty?.Object.TryResolve<ISpellGetter>(state.LinkCache, out var spell) ?? false)
+                return spell;
 
-            return false;
-        }
-
-        public static bool DescriptionContain(IPerkGetter perkGetter, string str)
-        {
-            return perkGetter.Description?.String?.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0;
+            return null;
         }
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
+            bool bslActive = state.LoadOrder.PriorityOrder.ModExists(BetterSpellLearning);
+
             foreach (var bookContext in state.LoadOrder.PriorityOrder.Book().WinningContextOverrides())
             {
-                IBookGetter book = bookContext.Record;
-
-                if (book.Name?.String == null) continue;
-                if (!book.Keywords?.Contains(Skyrim.Keyword.VendorItemSpellTome) ?? true) continue;
-                if (book.Teaches is not IBookSpellGetter teachedSpell) continue;
-                if (!teachedSpell.Spell.TryResolve(state.LinkCache, out var spell)) continue;
-                if (!state.LinkCache.TryResolveContext(spell.HalfCostPerk.FormKey, spell.HalfCostPerk.Type, out var halfCostPerkContext)) continue;
-                var halfCostPerk = (IPerkGetter)halfCostPerkContext.Record;
-                if (halfCostPerk == null) continue;
-                
-                string i18nBookName = "";
-                
-                if (!book.Name.TryLookup(Language.French, out i18nBookName)) {
-                    //Console.WriteLine($"{book.FormKey}: Pas de traduction pour: {book.Name.String}");
-                    i18nBookName = book.Name.String;
-                }
-                
-                //Console.WriteLine($"{book.FormKey}: Traduction: {i18nBookName}");
-
-                string spellName = GetSpellNameFromSpellTome(i18nBookName);
-                if (spellName == "")
+                var book = bookContext.Record;
+                try
                 {
-                    Console.WriteLine($"{book.FormKey}: Could not get spell name from: {i18nBookName}");
+                    if (book.Name?.String == null)
+                        continue;
 
-                    continue;
-                }
+                    if (!book.Keywords?.Contains(Skyrim.Keyword.VendorItemSpellTome) ?? true)
+                        continue;
 
-                string bookName = _settings.Value.Format;
-                bool changed = false;
-                if (bookName.Contains(levelFormatVariable))
-                {
-                    foreach (string skillLevel in skillLevels)
+                    ISpellGetter? spell = null;
+                    if (book.Teaches is IBookSpellGetter teachedSpell && teachedSpell.Spell.TryResolve(state.LinkCache, out var resolvedSpell))
+                        spell = resolvedSpell;
+                    else if (spell == null && bslActive)
+                        spell = GetBSLSpell(state, book);
+
+                    if (spell == null || spell.Name == null)
+                        continue;
+
+                    var spellName = spell.Name.String;
+                    var spellInfo = GetSpellInfo(state, spell);
+                    var settings = _settings.Value;
+
+                    var schoolName = "";
+                    var levelName = "";
+                    var modName = "";
+                    if (settings.Format.Contains(ModFormat))
                     {
-
-                        string i18nSkillLevel = Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(skillLevel));
-                        if (halfCostPerkContext.ModKey == Vokrii && halfCostPerk.Description != null)
+                        if (!settings.PluginModNamePairs.TryGetValue(bookContext.ModKey.FileName, out modName))
                         {
-                            if (!DescriptionContain(halfCostPerk, i18nSkillLevel)) continue;
-                        }
-                        else if (!NamedFieldsContain(halfCostPerk, i18nSkillLevel)) continue;
-
-
-                        bookName = bookName.Replace(levelFormatVariable, i18nSkillLevel);
-
-                        changed = true;
-                        break;
-                    }
-                }
-                if (halfCostPerkContext.ModKey == Vokrii && bookName.Contains(levelFormatVariable))
-                {
-                    bookName.Replace(levelFormatVariable, "Novice");
-                }
-                if (bookName.Contains(pluginFormatVariable))
-                {
-                    bookName = bookName.Replace(pluginFormatVariable, book.FormKey.ModKey.Name.ToString());
-                    changed = true;
-                }
-                if (bookName.Contains(schoolFormatVariable))
-                {
-                    foreach (string spellSchool in magicSchools)
-                    {
-                        string i18nSpellSchool = Encoding.GetEncoding("ISO-8859-1").GetString(Encoding.UTF8.GetBytes(spellSchool));
-                        
-                        if (NamedFieldsContain(halfCostPerk, i18nSpellSchool) || DescriptionContain(halfCostPerk, i18nSpellSchool))
-                        {
-                            bookName = bookName.Replace(schoolFormatVariable, i18nSpellSchool);
-                            changed = true;
-                            break;
+                            modName = SmartTryGenerateModName(bookContext.Record.FormKey.ModKey);
                         }
                     }
+
+                    var requiresSpellInfo = settings.Format.Contains(SchoolFormat) || settings.Format.Contains(LevelFormat);
+                    if (requiresSpellInfo)
+                    {
+                        if (spellInfo == null)
+                        {
+                            Console.WriteLine("Cannot determine school and level for book: " + book.Name.String);
+                            continue;
+                        }
+                        var school = spellInfo.Item1;
+                        schoolName = MagicSchools[school];
+
+
+                        var level = spellInfo.Item2;
+                        levelName = settings.LevelNames[level];
+                    }
+                    var pluginName = book.FormKey.ModKey.Name;
+
+
+                    var newName = settings.Format.Replace(LevelFormat, levelName).Replace(PluginFormat, pluginName).Replace(SchoolFormat, schoolName).Replace(SpellFormat, spellName).Replace(ModFormat, modName);
+
+                    Console.WriteLine(book.Name.String + "->" + newName);
+
+                    state.PatchMod.Books.GetOrAddAsOverride(book).Name = newName;
                 }
-                if (bookName.Contains(spellFormatVariable))
+                catch (Exception e)
                 {
-
-                    bookName = bookName.Replace(spellFormatVariable, GetSpellNameFromSpellTome(i18nBookName));
-                    changed = true;
-                }
-                if (changed && i18nBookName != bookName)
-
-                {
-                    string i18nBookDescription = null;
-                    string i18nBookText = null;
-                    book.Description?.TryLookup(Language.French, out i18nBookDescription);
-                    book.BookText?.TryLookup(Language.French, out i18nBookText);
-
-                    Book bookToAdd = book.DeepCopy();
-                    bookToAdd.Name = bookName;
-                    bookToAdd.Description = i18nBookDescription ?? book.Description.String;
-                    bookToAdd.BookText = i18nBookText ?? book.BookText.String;
-
-                    Console.WriteLine($"{book.FormKey}: {bookName} : {bookToAdd.BookText.String}");
-                    state.PatchMod.Books.Set(bookToAdd);
+                    Console.WriteLine(RecordException.Enrich(e, bookContext.ModKey, book).ToString());
                 }
             }
         }
+
+        private static string SmartTryGenerateModName(ModKey modKey) => modKey.Name.TitleCase();
+
     }
 }
